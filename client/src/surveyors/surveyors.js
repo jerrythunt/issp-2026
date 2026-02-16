@@ -9,5 +9,13 @@ export async function getSurvey() {
 }
 
 export async function submit(surveyorID, surveyID, responses) {
-    await setDoc(doc(db, "responses", `Surveyor-${surveyorID}-Survey-${surveyID}`), { surveyorID, surveyID, responses, }); // create new document for surveyor responses
+    try {
+        await setDoc(doc(db, "responses", `Surveyor-${surveyorID}-Survey-${surveyID}`), { // create new document for surveyor response data
+            surveyorID, surveyID, responses,
+        }); 
+
+    } catch(err) {
+        console.error("Submission failed: ", err);
+        throw err;
+    }
 }
