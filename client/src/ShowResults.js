@@ -527,7 +527,6 @@ function createToCPage(pdf) {
 
 function CreateGraph() {
     const chartRefs = useRef([]);
-    // const chartRefs = useRef([]);
     const scatterRefs = useRef([]);
     const distributionRef = useRef(); // we only have 1
     const heatmapRef = useRef();
@@ -576,7 +575,6 @@ function CreateGraph() {
             addTemplate(pdf, String(i));
         }
 
-        for (const ref of chartRefs.current) addChartPage(ref);
         for (let i = 0; i < scaleResponses.length; i++) addChartPage(scatterRefs.current[i], scaleResponses[i].question);
         addChartPage(distributionRef.current, "Table 3: Ratings Distribution");
 
@@ -602,15 +600,48 @@ function CreateGraph() {
             labels: labels,
             datasets: datasets,
         });
+        overview["Self"] += mean(datasets.find(d => d.label === "Self")["data"]);
+        overview["Raters"] += mean(datasets.find(d => d.label === "Raters")["data"]);
     }
+    const overviewData = {
+        labels: Object.keys(overview),
+        datasets: [
+            {
+                data: Object.values(overview).map(v => v / 2),
+                backgroundColor: Object.keys(overview).map(k => roleColor[k])
+            }
+        ]
+    };
 
     const scatterData = scaleResponses.map(parseScaleResponse);
     const distributionData = parseDistributionResponse(distributionResponses);
     return (
-        <div style={{ width: "80%", height: "25%" }}>
+        <div>
+            <Bar
+                ref={(el) => (chartRefs.current[0] = el)}
+                data={overviewData}
+                options={{
+                    indexAxis: "y",
+                    responsive: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        title: {
+                            display: true,
+                            text: "Overview",
+                            font: {
+                                size: 20
+                            }
+                        }
+                    }
+                }}
+                width={1280}
+                height={720}
+            />
             {chartData.map((n, index) => {
                 return <Bar
-                    ref={(el) => (el => chartRefs.current[index] = el.current[index + 1] = el)}
+                    ref={(el) => (chartRefs.current[index + 1] = el)}
                     key={index}
                     data={n}
                     options={{
