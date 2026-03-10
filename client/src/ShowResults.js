@@ -81,6 +81,10 @@ const formattedDate = today.toLocaleDateString("en-US", {
     day: "numeric",
 });
 
+let cats = [];
+let descs = [];
+
+
 function parseResponse(response) {
     let datasets = [];
     let labels = Object.keys(response["Self"]);
@@ -130,8 +134,8 @@ function addTemplate(pdf, pageNum) {
     pdf.setFontSize(headerFont);
     pdf.setTextColor("#000");
     pdf.setFont("helvetica", "bold");
-    pdf.text(pageNum, margin/2, margin/2);
-    pdf.addImage(image1, "PNG", width/2 - image1Width/2, height - margin, image1Width, image1Height);
+    pdf.text(pageNum, margin / 2, margin / 2);
+    pdf.addImage(image1, "PNG", width / 2 - image1Width / 2, height - margin, image1Width, image1Height);
 }
 
 function addIndentBody(pdf, text, yPos) {
@@ -158,8 +162,6 @@ function addIndentBody(pdf, text, yPos) {
 
 function createContextPages(pdf, name) {
     let yPos = 0;
-    let headers = ["Introduction", "How to use this report"];
-    let subheaders = ["Why leadership developement?", "What is a 360 assessment?"]
 
     // Page 1
     const text = "LEADERSHIP 360";
@@ -196,10 +198,10 @@ function createContextPages(pdf, name) {
                 `;
     const text5 = `A 360 is a powerful tool to better understand your leadership:`
     const text6 = `By gaining a deeper understanding of how you see yourself in relation to LDB Leadership Competencies.\nBy learning how those you work with see and perceive your leadership capabilities.\nBy hearing how others experience your leadership.\nHelping you connect your actions, approach, and behaviours to the work that you do, and better understand what is effective, what may not be as useful, and any gaps or invisible gaps that may exist.`;
-    yPos = addHeader(pdf, headers[0], margin);
-    yPos = addSubheader(pdf, subheaders[0], yPos);
+    yPos = addHeader(pdf, "Introduction", margin);
+    yPos = addSubheader(pdf, "Why leadership development?", yPos);
     yPos = addBody(pdf, text4, yPos);
-    yPos = addSubheader(pdf, subheaders[1], yPos);
+    yPos = addSubheader(pdf, "What is a 360 assessment?", yPos);
     yPos = addBody(pdf, text5, yPos);
     yPos = addIndentBody(pdf, text6, yPos);
     pdf.addPage();
@@ -210,18 +212,60 @@ function createContextPages(pdf, name) {
     const text9 = `Your coach will walk you through the following pages of this report, helping you to interpret the data provided. As you review the responses, it is important to keep in mind that everyone's experience will vary, which will be reflected in the results. Through discussion with your coach, through taking time to reflect on the data, and taking time to notice and observe your day-to-day actions and behaviours, you will be able to make meaning of what is contained in your 360 report.\n\nIn addition to the 360 results contained within this report, keep a copy of the LDB Leadership Development Toolkit close by. While the 360 report provides a snapshot of where you may be as a leader, the toolkit breaks down each competency in detail, providing key success factors and sample behaviours and actions that demonstrate effective leadership.\n\nIn combination, these two leadership development tools contain a wealth of insights as you continue to refine and enhance your leadership practice. With the support of your coach and your own leader(s), you will be able to:`;
     const text10 = `Make meaning of the insights and data from your 360.\nGain a deeper appreciation of the good work you do as a leader within the LDB.\nIdentify opportunities for further growth and development as a leader.\nDevelop meaningful and impactful goals as part of your MyP3 process.\nDeepen your self-awareness.\nGrow, both professionally and personally.`;
 
-    yPos = addHeader(pdf, headers[1], margin);
+    yPos = addHeader(pdf, "How to use this report", margin);
     yPos = addBody(pdf, text7, yPos);
     yPos = addIndentBody(pdf, text8, yPos);
     yPos = addBody(pdf, text9, yPos);
     addIndentBody(pdf, text10, yPos);
 }
 
-function createChartPage(pdf, image, header, subheader) {
+function createChartPage(pdf, image, cat, desc) {
     pdf.addPage();
-    let yPos = addHeader(pdf, header, margin);
-    yPos = addSubheader(pdf, subheader, yPos);
+    let yPos = addHeader(pdf, cat, margin);
+    if (desc) {
+        yPos = addSubheader(pdf, desc, yPos);
+
+    }
+    yPos += blankLine;
     pdf.addImage(image, "PNG", (width - chartWidth) / 2, yPos, chartWidth, chartHeight);
+    cats.push(cat);
+    descs.push(desc);
+}
+
+function addContent(pdf, header, subheader, yPos, page, indent) {
+    pdf.setTextColor("#000");
+    pdf.setFontSize(regularFont);
+    pdf.setFont("helvetica", "bold");
+    let headerWidth = 0;
+    if (header) {
+        pdf.text(header, margin + indent, yPos);
+        headerWidth = pdf.getTextWidth(header);
+    }
+
+    pdf.text(page, width - margin, yPos);
+    pdf.setFont("helvetica", "normal");
+    let lines = []
+    if (subheader) {
+        lines = pdf.splitTextToSize(subheader, maxTextWidth);
+        pdf.text(lines, margin + indent + headerWidth + spacing, yPos);
+    }
+    if (lines.length > 0) {
+        return yPos + (pdf.getTextDimensions("filler").h * (lines.length - 1) * lineHeight) + blankLine;
+    }
+    return yPos + (pdf.getTextDimensions("filler").h * (lines.length) * lineHeight) + blankLine;
+
+}
+
+function createToCPage(pdf) {
+    let yPos = addHeader(pdf, "Table of Contents", margin);
+    yPos = addContent(pdf, "INTRODUCTION", null, yPos, "3", 0);
+    yPos = addContent(pdf, null, "Why leadership development?", yPos, "3", spacing);
+    yPos = addContent(pdf, null, "What is a 360 assessment?", yPos, "3", spacing);
+    yPos = addContent(pdf, "HOW TO USE THIS REPORT", null, yPos, "4", 0);
+    yPos = addContent(pdf, cats[0], descs[0], yPos, "5", 0);
+    for (let i = 1; i < cats.length; i++) {
+        yPos = addContent(pdf, cats[i], descs[i], yPos, String(i + 5), spacing);
+    }
 }
 
 function CreateGraph() {
@@ -236,10 +280,11 @@ function CreateGraph() {
         });
         createContextPages(pdf, "testName", margin);
         for (let image of chartRefs.current) {
-            createChartPage(pdf, image.toBase64Image("image/png", 2), "testHeader", "testSubheader");
+            createChartPage(pdf, image.toBase64Image("image/png", 2), "category", "description of category, can be empty string.");
         }
         for (let i = 2; i <= pdf.getNumberOfPages(); i++) {
             pdf.setPage(i);
+            if (i === 2) { createToCPage(pdf) };
             addTemplate(pdf, String(i));
         }
         pdf.save("report.pdf");
