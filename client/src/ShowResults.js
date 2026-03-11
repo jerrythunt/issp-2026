@@ -34,7 +34,8 @@ function mean(arr) {
     for (let v of arr) {
         sum += v;
     }
-    return sum / arr.length;
+
+    return Number((sum / arr.length).toFixed(2));
 }
 
 const roleColor = {
@@ -139,7 +140,7 @@ const distributionOptions = {
             ticks: {
                 maxRotation: 0,
                 autoSkip: false,
-                callback: function(value) {
+                callback: function (value) {
                     const label = this.getLabelForValue(value);
                     const maxChars = 40;
                     if (label.length <= maxChars) return label;
@@ -177,16 +178,16 @@ const heatmapData = {
     ],
     // Each row: [selfRating, directReports, peer, leader, indirectReports]
     rows: [
-        [4.00,  0.00, -0.33,  1.00,  0.00],
-        [4.00,  0.20, -0.67,  1.00, -0.25],
+        [4.00, 0.00, -0.33, 1.00, 0.00],
+        [4.00, 0.20, -0.67, 1.00, -0.25],
         [5.00, -0.80, -2.00, -1.00, -1.00],
-        [4.00, -0.80, -1.33,  0.00, -1.00],
-        [5.00, -0.60, -1.00,  0.00, -0.25],
-        [4.00, -0.40, -0.67,  0.00,  0.25],
-        [4.00,  0.00,  0.00,  0.00, -0.25],
-        [4.00, -0.40, -1.00,  0.00, -0.50],
-        [4.00, -0.60, -1.00,  1.00, -0.25],
-        [4.00,  0.00, -1.33,  0.00,  0.00],
+        [4.00, -0.80, -1.33, 0.00, -1.00],
+        [5.00, -0.60, -1.00, 0.00, -0.25],
+        [4.00, -0.40, -0.67, 0.00, 0.25],
+        [4.00, 0.00, 0.00, 0.00, -0.25],
+        [4.00, -0.40, -1.00, 0.00, -0.50],
+        [4.00, -0.60, -1.00, 1.00, -0.25],
+        [4.00, 0.00, -1.33, 0.00, 0.00],
     ]
 };
 
@@ -272,9 +273,6 @@ const image1Width = 30;
 const image2Height = 100;
 const image2Width = 100;
 
-const chartWidth = width - margin * 2;
-const chartHeight = chartWidth / 2;
-
 const formattedDate = today.toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
@@ -341,7 +339,6 @@ const scatterOptions = {
 let cats = [];
 let descs = [];
 
-
 function parseResponse(response) {
     let datasets = [];
     let labels = Object.keys(response["Self"]);
@@ -349,7 +346,7 @@ function parseResponse(response) {
         if (role === "Peers" && response[role][labels[0]].length <= 2) continue;
         let data = [];
         for (let q of labels) {
-            data.push(mean(response[role][q]));
+            data.push(Number((mean(response[role][q])).toFixed(2)));
         }
         datasets.push({
             label: role,
@@ -476,7 +473,7 @@ function createContextPages(pdf, name) {
     addIndentBody(pdf, text10, yPos);
 }
 
-function createChartPage(pdf, image, cat, desc) {
+function createChartPage(pdf, image, imageWidth, imageHeight, cat, desc) {
     pdf.addPage();
     let yPos = addHeader(pdf, cat, margin);
     if (desc) {
@@ -484,7 +481,7 @@ function createChartPage(pdf, image, cat, desc) {
 
     }
     yPos += blankLine;
-    pdf.addImage(image, "PNG", (width - chartWidth) / 2, yPos, chartWidth, chartHeight);
+    pdf.addImage(image, "PNG", (width - imageWidth) / 2, yPos, imageWidth, imageHeight);
     cats.push(cat);
     descs.push(desc);
 }
@@ -539,53 +536,26 @@ function CreateGraph() {
             lineHeight: lineHeight
         });
 
-        const printW = width - margin * 2;
-
-        function setTitle(title, kwargs = {}) {
-            if (!title) return;
-            pdf.setFontSize(headerFont);
-            pdf.setTextColor("#3360a0");
-            pdf.setFont("helvetica", "bold");
-            pdf.text(title, ...kwargs);
-        }
-
-        function addChartPage(ref, title = null) {
-            if (!ref) return;
-            pdf.addPage();
-            let yPos = margin;
-            if (title) {
-                // pdf.setFontSize(headerFont);
-                // pdf.setTextColor("#3360a0");
-                // pdf.setFont("helvetica", "bold");
-                // pdf.text(title, margin, yPos);
-                setTitle(title, [margin, yPos]);
-                yPos += pdf.getTextDimensions("filler").h + blankLine;
-            }
-            const imgData = ref.toBase64Image("image/png", 1);
-            const imgHeight = (ref.height / ref.width) * printW;
-            pdf.addImage(imgData, "PNG", margin, yPos, printW, imgHeight);
-        }
         createContextPages(pdf, "testName", margin);
         for (let image of chartRefs.current) {
-            createChartPage(pdf, image.toBase64Image("image/png", 2), "category", "description of category, can be empty string.");
+            createChartPage(pdf, image.toBase64Image("image/png", 2), width - margin * 2, (width - margin * 2)/2, "category", "description of category, can be empty string.");
         }
+
+        for (let i = 0; i < scaleResponses.length; i++) {
+            createChartPage(pdf, scatterRefs.current[i].toBase64Image("image/png", 2), width - margin * 2, (scatterRefs.current[i].height / scatterRefs.current[i].width) * (width - margin * 2), scaleResponses[i].question, "");
+        }
+        createChartPage(pdf, distributionRef.current.toBase64Image("image/png", 2), width - margin * 2, (distributionRef.current.height / distributionRef.current.width) * (width - margin * 2), "Table 3: Ratings Distribution", "");
+
+        // cannot add heatmap as referenced chart, need to use html2canvas to capture as image
+        const canvas = await html2canvas(heatmapRef.current);
+        const imgData = canvas.toDataURL("image/png");
+        createChartPage(pdf, imgData, width - margin * 2, (canvas.height / canvas.width) * (width - margin * 2), "Table 2: Ratings Differentials", "")
+
         for (let i = 2; i <= pdf.getNumberOfPages(); i++) {
             pdf.setPage(i);
             if (i === 2) { createToCPage(pdf) };
             addTemplate(pdf, String(i));
         }
-
-        for (let i = 0; i < scaleResponses.length; i++) addChartPage(scatterRefs.current[i], scaleResponses[i].question);
-        addChartPage(distributionRef.current, "Table 3: Ratings Distribution");
-
-        // cannot add heatmap as referenced chart, need to use html2canvas to capture as image
-        const canvas = await html2canvas(heatmapRef.current);
-        const imgData = canvas.toDataURL("image/png");
-        pdf.addPage();
-        setTitle("Table 2: Ratings Differentials", [margin, margin]);
-        const imgHeight = (canvas.height / canvas.width) * printW;
-        pdf.addImage(imgData, "PNG", margin, margin, printW, imgHeight);
-
         pdf.save("report.pdf");
     };
 
@@ -607,7 +577,7 @@ function CreateGraph() {
         labels: Object.keys(overview),
         datasets: [
             {
-                data: Object.values(overview).map(v => v / 2),
+                data: Object.values(overview).map(v => (v / 2)),
                 backgroundColor: Object.keys(overview).map(k => roleColor[k])
             }
         ]
