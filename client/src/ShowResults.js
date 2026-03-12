@@ -74,6 +74,8 @@ const ratingColors = [
     "#A9D18E",
 ];
 
+
+
 // Each inner array is [Rarely, Inconsistently, Generally, Consistently, Clear Strength, Not Observed] counts per question
 const distributionResponses = {
     questions: [
@@ -252,6 +254,8 @@ const responses = [{ // split by categories
     Leader: { q1: [4], q2: [4], q3: [4] },
     Raters: { q1: [2, 2, 2, 2, 2, 3, 3, 3, 4], q2: [2, 2, 2, 2, 2, 3, 3, 3, 4], q3: [2, 2, 2, 2, 2, 3, 3, 3, 4] }
 }]
+
+const narrativeResponses = [{q1: "This is question1", q2: "This is question2", q3: "This is question3"},{q1: ["Some response 1", "Some response 2"], q2: ["Some response to question 2", "More response!"], q3: ["AAAAAAAAAAAAAAAAAAAAAAAAAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAAAAAAAAAAAAAAAAAAAAAAAAAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."]}]
 
 const margin = 25.4; // 1 inch
 const spacing = 5;
@@ -507,7 +511,15 @@ function addContent(pdf, header, subheader, yPos, page, indent) {
         return yPos + (pdf.getTextDimensions("filler").h * (lines.length - 1) * lineHeight) + blankLine;
     }
     return yPos + (pdf.getTextDimensions("filler").h * (lines.length) * lineHeight) + blankLine;
+}
 
+function createNarrativePage(pdf, question, responses) {
+    pdf.addPage();
+    let yPos = addHeader(pdf, question, margin);
+    let response = responses.join("\n");
+    addBody(pdf, response, yPos);
+    cats.push(question)
+    descs.push("");
 }
 
 function createToCPage(pdf) {
@@ -551,6 +563,9 @@ function CreateGraph() {
         const imgData = canvas.toDataURL("image/png");
         createChartPage(pdf, imgData, width - margin * 2, (canvas.height / canvas.width) * (width - margin * 2), "Table 2: Ratings Differentials", "")
 
+        for (let question of Object.keys(narrativeResponses[0])) {
+            createNarrativePage(pdf, question, narrativeResponses[1][question]);
+        }
         for (let i = 2; i <= pdf.getNumberOfPages(); i++) {
             pdf.setPage(i);
             if (i === 2) { createToCPage(pdf) };
