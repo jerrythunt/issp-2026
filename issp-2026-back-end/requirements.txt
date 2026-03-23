@@ -1,0 +1,6 @@
+# Node.js Backend Dependencies
+express@5.2.1
+firebase-admin@13.6.1
+dotenv@17.3.1
+cookie-parser@1.4.7
+cors@2.8.6

@@ -1,0 +1,38 @@
+# Node.js backend
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# React frontend
+client/node_modules/
+client/build/
+
+# Environment variables
+.env
+client/.env
+
+# Firebase Admin SDK key (backend only)
+admin_key.json
+
+# Logs
+*.log
+logs/
+*.local
+
+# OS / IDE files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Optional: Mac system files
+*.swp
+
+# Optional: build outputs
+dist/
+
+
+node_modules
+.env
+serviceAccountKey.json
