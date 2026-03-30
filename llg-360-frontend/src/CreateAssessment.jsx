@@ -149,7 +149,8 @@ function CreateAssessment() {
                   style={inputStyle}
                 >
                   <option value="">Select Relationship</option>
-                  <option value="Boss">Boss</option>
+                  <option value="Leader leader">Leader's leader</option>
+                  <option value="Leader">Leader</option>
                   <option value="Peer">Peer</option>
                   <option value="Direct Report">Direct Report</option>
                   <option value="Other">Other</option>
