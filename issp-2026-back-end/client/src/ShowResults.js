@@ -13,8 +13,8 @@ import {
 import { Bar, Scatter } from "react-chartjs-2";
 import ChartDataLabels from "chartjs-plugin-datalabels";
 import jsPDF from "jspdf";
-import image1 from "./images/logo.png"
-import image2 from "./images/competencies.png"
+import clarityHeaderLogo from "./images/clarityindex.png";
+import newLogo from "./images/newlogo.png";
 import html2canvas from "html2canvas";
 
 ChartJS.register(
@@ -255,27 +255,61 @@ const responses = [{ // split by categories
     Raters: { q1: [2, 2, 2, 2, 2, 3, 3, 3, 4], q2: [2, 2, 2, 2, 2, 3, 3, 3, 4], q3: [2, 2, 2, 2, 2, 3, 3, 3, 4] }
 }]
 
-const narrativeResponses = [{q1: "This is question1", q2: "This is question2", q3: "This is question3"},{q1: ["Some response 1", "Some response 2"], q2: ["Some response to question 2", "More response!"], q3: ["AAAAAAAAAAAAAAAAAAAAAAAAAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAAAAAAAAAAAAAAAAAAAAAAAAAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."]}]
+const narrativeResponses = [
+    {
+        question: "What are this leader's top strengths that most positively influence their effectiveness?",
+        responses: [
+            "Jane is thoughtful, authentic, and steady. Her openness and calm approach build trust and psychological safety.",
+            "She collaborates well, listens deeply, and empowers others through autonomy and thoughtful delegation.",
+            "Raters consistently describe her as supportive, transparent, and values-driven."
+        ]
+    },
+    {
+        question: "Where has this leader made meaningful impact in the past year?",
+        responses: [
+            "Led through complex organizational priorities including bargaining and SIP initiatives.",
+            "Strengthened HR's strategic credibility and alignment with enterprise priorities.",
+            "Maintained people support and well-being focus during high-pressure periods."
+        ]
+    },
+    {
+        question: "What should this leader do more of, less of, and/or differently?",
+        responses: [
+            "Articulate a clearer long-term HR vision and future-focused strategy.",
+            "Increase visible decisiveness and strengthen boundary-setting around team capacity.",
+            "Broaden direct engagement across leader levels to reduce blind spots and improve alignment."
+        ]
+    },
+    {
+        question: "How does this leader contribute to building a positive culture, psychological safety, and strong team dynamics?",
+        responses: [
+            "Creates an environment where people feel seen, respected, and safe to contribute.",
+            "Models calm, ethical, and empathetic leadership in difficult moments.",
+            "Encourages collaboration and open dialogue across teams."
+        ]
+    },
+    {
+        question: "Any additional comments you would like to share?",
+        responses: [
+            "The leader is widely respected for strategic focus, authenticity, and commitment to people.",
+            "Additional dedicated time for one-on-one connection could further strengthen cohesion and support."
+        ]
+    }
+]
 
 const margin = 25.4; // 1 inch
 const spacing = 5;
-const body = margin * 2;
-const width = 297;
-const height = 210;
-const footer = height - margin;
-const regularFont = 12;
-const headerFont = 14;
-const lineHeight = 1.2;
+const width = 210;
+const regularFont = 9;
+const headerFont = 11;
+const lineHeight = 1.15;
 const blankLine = 4.2333333333333325 * lineHeight;
 const maxTextWidth = width - (margin * 2);
 const maxIndentTextWidth = width - (margin * 3);
 const today = new Date();
 
-const image1Height = 15;
-const image1Width = 30;
-
-const image2Height = 100;
-const image2Width = 100;
+const headerLogoHeight = 9;
+const headerLogoWidth = 42;
 
 const formattedDate = today.toLocaleDateString("en-US", {
     year: "numeric",
@@ -361,22 +395,57 @@ function parseResponse(response) {
     return { datasets, labels };
 }
 
+function getContentBottomY(pdf) {
+    return pdf.internal.pageSize.getHeight() - margin;
+}
+
+function writeWrappedLinesWithPaging(pdf, lines, x, yPos) {
+    const linePixelHeight = pdf.getTextDimensions("filler").h * lineHeight;
+
+    if (!Array.isArray(lines) || lines.length === 0) {
+        return yPos + blankLine;
+    }
+
+    let index = 0;
+    while (index < lines.length) {
+        const availableHeight = getContentBottomY(pdf) - yPos;
+        let linesThatFit = Math.floor(availableHeight / linePixelHeight);
+
+        if (linesThatFit <= 0) {
+            pdf.addPage();
+            yPos = margin;
+            continue;
+        }
+
+        linesThatFit = Math.min(linesThatFit, lines.length - index);
+        const chunk = lines.slice(index, index + linesThatFit);
+        pdf.text(chunk, x, yPos);
+        yPos += linePixelHeight * linesThatFit;
+        index += linesThatFit;
+
+        if (index < lines.length) {
+            pdf.addPage();
+            yPos = margin;
+        }
+    }
+
+    return yPos + blankLine;
+}
+
 function addHeader(pdf, text, yPos) {
     pdf.setFontSize(headerFont);
-    pdf.setTextColor("#3360a0");
+    pdf.setTextColor("#000");
     pdf.setFont("helvetica", "bold");
     let lines = pdf.splitTextToSize(text, maxTextWidth);
-    pdf.text(lines, margin, yPos);
-    return yPos + (pdf.getTextDimensions("filler").h * lines.length * lineHeight) + blankLine;
+    return writeWrappedLinesWithPaging(pdf, lines, margin, yPos);
 }
 
 function addSubheader(pdf, text, yPos) {
     pdf.setFontSize(headerFont);
-    pdf.setTextColor("#3360a0");
+    pdf.setTextColor("#000");
     pdf.setFont("helvetica", "normal");
     let lines = pdf.splitTextToSize(text, maxTextWidth);
-    pdf.text(lines, margin, yPos);
-    return yPos + (pdf.getTextDimensions("filler").h * lines.length * lineHeight) + blankLine;
+    return writeWrappedLinesWithPaging(pdf, lines, margin, yPos);
 }
 
 function addBody(pdf, text, yPos) {
@@ -384,8 +453,7 @@ function addBody(pdf, text, yPos) {
     pdf.setTextColor("#000");
     pdf.setFont("helvetica", "normal");
     let lines = pdf.splitTextToSize(text, maxTextWidth);
-    pdf.text(lines, margin, yPos);
-    return yPos + (pdf.getTextDimensions("filler").h * lines.length * lineHeight) + blankLine;
+    return writeWrappedLinesWithPaging(pdf, lines, margin, yPos);
 }
 
 function addTemplate(pdf, pageNum) {
@@ -393,7 +461,7 @@ function addTemplate(pdf, pageNum) {
     pdf.setTextColor("#000");
     pdf.setFont("helvetica", "bold");
     pdf.text(pageNum, margin / 2, margin / 2);
-    pdf.addImage(image1, "PNG", width / 2 - image1Width / 2, height - margin, image1Width, image1Height);
+    pdf.addImage(clarityHeaderLogo, "PNG", width / 2 - headerLogoWidth / 2, margin * 0.35, headerLogoWidth, headerLogoHeight);
 }
 
 function addIndentBody(pdf, text, yPos) {
@@ -414,67 +482,109 @@ function addIndentBody(pdf, text, yPos) {
             lines.push(widthSplit[j]);
         }
     }
-    pdf.text(lines, margin * 1.4, yPos);
-    return yPos + (pdf.getTextDimensions("filler").h * lines.length * lineHeight) + blankLine;
+    return writeWrappedLinesWithPaging(pdf, lines, margin * 1.4, yPos);
 }
 
 function createContextPages(pdf, name) {
     let yPos = 0;
 
     // Page 1
-    const text = "LEADERSHIP 360";
-    const text2 = "In partnership with LeBlanc Leadership Group Inc.";
-    const text3 = "The LIVE. LEARN. GROW. Company"
-    pdf.setFontSize(26);
+    const centerX = width / 2;
+    const subtitle = "A focused 360 for leadership clarity and impact";
+    const intro = "The Clarity Index is a developmental feedback tool designed to support leadership self-awareness, insight, and focused growth conversations. It is not intended for performance management, compensation decisions, or disciplinary action.";
+    const tagline = "Clarity creates choice. Choice creates growth.";
+
+    pdf.addImage(clarityHeaderLogo, "PNG", centerX - 52, 24, 104, 38);
+
+    pdf.setFont("times", "italic");
+    pdf.setFontSize(10.5);
+    pdf.text(subtitle, centerX, 71, { align: "center" });
+
+    pdf.setDrawColor(0);
+    pdf.setLineWidth(0.2);
+    pdf.line(margin, 79, width - margin, 79);
+
     pdf.setFont("times", "normal");
-    pdf.text(text, margin, margin);
-    const text1Width = pdf.getTextWidth(text);
+    pdf.setFontSize(9.5);
+    const introLines = pdf.splitTextToSize(intro, width - margin * 2 - 10);
+    pdf.text(introLines, centerX, 86, { align: "center" });
 
-    pdf.setFontSize(12);
-    const text2Width = pdf.getTextWidth(text2);
-    const text3Width = pdf.getTextWidth(text3);
-    pdf.text(text2, width / 2 - text2Width / 2, footer - pdf.getFontSize() / 2);
-    pdf.text(text3, width / 2 - text3Width / 2, footer);
+    pdf.line(margin, 112, width - margin, 112);
+    pdf.line(centerX - 18, 120, centerX + 18, 120);
 
-    pdf.addImage(image1, "PNG", margin + text1Width + spacing, margin - (image1Height * 0.7), image1Width, image1Height);
-    pdf.addImage(image2, "PNG", margin, body, image2Width, image2Height);
+    pdf.setFont("times", "bold");
+    pdf.setFontSize(16);
+    pdf.text(name, centerX, 132, { align: "center" });
 
-    pdf.setFontSize(26);
-    pdf.setFont("helvetica", "normal");
-    pdf.text(name, margin + image2Width + spacing, body + image2Height / 2 - pdf.getFontSize() / 2);
-    pdf.text(formattedDate, margin + image2Width + spacing, body + image2Height / 2);
+    pdf.setFont("times", "normal");
+    pdf.setFontSize(11);
+    pdf.text(formattedDate, centerX, 141, { align: "center" });
+
+    pdf.line(centerX - 16, 148, centerX + 16, 148);
+    pdf.line(margin, 154, width - margin, 154);
+    pdf.line(centerX - 16, 160, centerX + 16, 160);
+
+    pdf.addImage(newLogo, "PNG", centerX - 20, 168, 40, 40);
+    pdf.text(".", centerX, 212, { align: "center" });
+
+    pdf.setFont("times", "bolditalic");
+    pdf.setFontSize(10.5);
+    pdf.text(tagline, centerX, 220, { align: "center" });
     pdf.addPage();
 
     // Page 2 (Left blank to put in table of content later)
     pdf.addPage();
 
     // Page 3
-    const text4 = `Leadership development is a vital component of building a great organization. It allows you to shape the culture and strategy of the business. Developing and sharpening leadership skills across leadership will increase employee morale and retention, improve productivity, promote better decision making, build better teams, and result in a better work environment for everyone.
-\nLeadership development is a lifelong process, not a one-off learning event. There is always something to be improved upon. It doesn’t need to be daunting or complicated. Slow, consistent development is the best approach. Small changes can end up making a huge impact on your career and work life.
-\nYour leadership development journey starts with understanding the skills needed to be a leader at the LDB, recognizing and appreciating your strengths, and reflecting on what abilities you need to develop to improve your leadership impact.
-\nThis Leadership 360 Assessment is a companion to the LDB Leadership Development Toolkit, providing valuable insights as you work to refine and enhance your leadership capabilities and capacity.
-                `;
-    const text5 = `A 360 is a powerful tool to better understand your leadership:`
-    const text6 = `By gaining a deeper understanding of how you see yourself in relation to LDB Leadership Competencies.\nBy learning how those you work with see and perceive your leadership capabilities.\nBy hearing how others experience your leadership.\nHelping you connect your actions, approach, and behaviours to the work that you do, and better understand what is effective, what may not be as useful, and any gaps or invisible gaps that may exist.`;
-    yPos = addHeader(pdf, "Introduction", margin);
-    yPos = addSubheader(pdf, "Why leadership development?", yPos);
-    yPos = addBody(pdf, text4, yPos);
-    yPos = addSubheader(pdf, "What is a 360 assessment?", yPos);
-    yPos = addBody(pdf, text5, yPos);
-    yPos = addIndentBody(pdf, text6, yPos);
+    yPos = addHeader(pdf, "Introduction to Your Clarity Index 360™ Report", margin);
+    yPos = addSubheader(pdf, "Purpose of the Clarity Index 360™", yPos);
+    yPos = addBody(pdf, "The Clarity Index 360™ is a facilitated, developmental leadership insight tool designed to help leaders understand how their leadership behaviours are experienced, perceived, and felt by others at work.", yPos);
+    yPos = addBody(pdf, "Rather than measuring everything at once, the Clarity Index 360 intentionally focuses on a small number of priority behaviours that matter most for effectiveness, relationships, and impact right now. The goal is not perfection, comparison, or judgment, it is clarity: clarity about what is working well, where leadership impact is strongest, and where focused attention or refinement may be useful.", yPos);
+
+    yPos = addSubheader(pdf, "How the Clarity Index 360 Is Designed", yPos);
+    yPos = addBody(pdf, "The Clarity Index 360 differs from traditional 360-degree feedback tools in several important ways:", yPos);
+    yPos = addIndentBody(pdf, "It is focused and bespoke, rather than broad or competency heavy.\nIt is administered and facilitated by The LIVE. LEARN. GROW. Company, a division of LeBlanc Leadership Group Inc.\nIt prioritizes insight over volume, collecting only data that will be used.\nIt is never delivered without facilitation, ensuring context, care, and meaning.\nIt treats feedback as developmental input, not evaluative judgment.", yPos);
+    yPos = addBody(pdf, "Each Clarity Index 360 is customized based on the leader's role, context, goals, and coaching focus. Questions are drawn from a curated menu of behavioural statements and open-ended prompts, with a maximum of:", yPos);
+    yPos = addIndentBody(pdf, "Approximately 10 rating questions, and\n3-5 narrative questions", yPos);
+    yPos = addBody(pdf, "All raters are asked to respond based on direct observation of behaviour, not intent, personality, or assumptions. There are no right or wrong answers - honest, thoughtful input helps surface patterns that support reflection, learning, and constructive conversation.", yPos);
     pdf.addPage();
 
     // Page 4
-    const text7 = `The LDB Leadership 360 is designed to provide data and insights. Using the LDB's 13 Leadership Competencies as a foundation, the 360 statements provide clarity around:`;
-    const text8 = `How you see yourself as a leader. What do you believe about your effectiveness as a leader? Do you give yourself enough credit for the good things that you do? Are there practices or patterns in your leadership that were once effective, but no longer serve you? Are there things that you have been working on already? Gaps or invisible gaps in your leadership?\nHow key groups within your professional life see, perceive, and experience your leadership. What do they respect and appreciate about you as a leader? Are there behaviours or practices that perhaps are not as effective, potentially adding tension and conflict? Are these behaviours gaps things you are already familiar with and working on? Or are they invisible gaps, things you are unaware of, or have not been brought to your attention?`;
-    const text9 = `Your coach will walk you through the following pages of this report, helping you to interpret the data provided. As you review the responses, it is important to keep in mind that everyone's experience will vary, which will be reflected in the results. Through discussion with your coach, through taking time to reflect on the data, and taking time to notice and observe your day-to-day actions and behaviours, you will be able to make meaning of what is contained in your 360 report.\n\nIn addition to the 360 results contained within this report, keep a copy of the LDB Leadership Development Toolkit close by. While the 360 report provides a snapshot of where you may be as a leader, the toolkit breaks down each competency in detail, providing key success factors and sample behaviours and actions that demonstrate effective leadership.\n\nIn combination, these two leadership development tools contain a wealth of insights as you continue to refine and enhance your leadership practice. With the support of your coach and your own leader(s), you will be able to:`;
-    const text10 = `Make meaning of the insights and data from your 360.\nGain a deeper appreciation of the good work you do as a leader within the LDB.\nIdentify opportunities for further growth and development as a leader.\nDevelop meaningful and impactful goals as part of your MyP3 process.\nDeepen your self-awareness.\nGrow, both professionally and personally.`;
+    yPos = addSubheader(pdf, "How to Read the Ratings", margin);
+    yPos = addBody(pdf, "The rating questions use a behaviourally anchored scale, defined as follows:", yPos);
+    yPos = addBody(pdf, "1 - Rarely Demonstrated\nThis behaviour is rarely observed or is ineffective when it occurs. It may create confusion, misalignment, or require intervention.", yPos);
+    yPos = addBody(pdf, "2 - Inconsistently Demonstrated\nThe behaviour shows up occasionally but lacks consistency or impact. Effectiveness may vary by situation, pressure, or audience.", yPos);
+    yPos = addBody(pdf, "3 - Generally Demonstrated\nThe behaviour is regularly observed and generally effective. It meets expectations and contributes positively, with room to strengthen impact or consistency.", yPos);
+    yPos = addBody(pdf, "4 - Consistently Demonstrated\nThe behaviour is clearly and consistently demonstrated and meets expectations. It positively influences others and supports strong individual or team outcomes.", yPos);
+    yPos = addBody(pdf, "5 - Clear Strength / Role Model\nThis behaviour is a distinct strength. The leader models it for others and it meaningfully elevates team, system, or organizational effectiveness.", yPos);
+    yPos = addBody(pdf, "N/O - Not Observed\nThe rater has not had sufficient opportunity to observe this behaviour and cannot rate it fairly", yPos);
 
-    yPos = addHeader(pdf, "How to use this report", margin);
-    yPos = addBody(pdf, text7, yPos);
-    yPos = addIndentBody(pdf, text8, yPos);
-    yPos = addBody(pdf, text9, yPos);
-    addIndentBody(pdf, text10, yPos);
+    yPos = addSubheader(pdf, "Understanding Aggregation and Confidentiality", yPos);
+    yPos = addBody(pdf, "The Clarity Index 360 is designed to protect psychological safety while preserving insight:", yPos);
+    yPos = addIndentBody(pdf, "Self-ratings are shown transparently and included in overall averages.\nLeader and Leader's Leader ratings are shown transparently.\nOther rater categories are shown only when there are three or more raters in that category.\nCategories with fewer than three raters are included in the overall score but not shown separately.", yPos);
+    yPos = addBody(pdf, "These rules ensure confidentiality while still allowing meaningful patterns to emerge.", yPos);
+
+    yPos = addSubheader(pdf, "Narrative Comments and Thematic Insights", yPos);
+    yPos = addBody(pdf, "In addition to numeric ratings, this report includes verbatim narrative comments. These comments are not attributed to individual raters and are presented to add context, nuance, and texture to the quantitative data.", yPos);
+    yPos = addBody(pdf, "Where appropriate, themes may be synthesized to surface:", yPos);
+    yPos = addIndentBody(pdf, "Strengths\nGrowth edges\nPatterns and tensions\nOpportunities for intentional development", yPos);
+    yPos = addBody(pdf, "The intent is to support conversation, reflection, and action, not judgment.", yPos);
+
+    yPos = addSubheader(pdf, "What This Assessment Is (and Is Not)", yPos);
+    yPos = addBody(pdf, "The Clarity Index 360 is:", yPos);
+    yPos = addIndentBody(pdf, "A tool for self-awareness and leadership growth\nInput for coaching and developmental dialogue\nA way to reduce noise and focus attention on what matters most", yPos);
+    yPos = addBody(pdf, "The Clarity Index 360 is not used for:", yPos);
+    yPos = addIndentBody(pdf, "Performance ratings\nCompensation or promotion decisions\nRanking leaders against one another\nDisciplinary or HR compliance purposes", yPos);
+    yPos = addSubheader(pdf, "A Final Note", yPos);
+    yPos = addBody(pdf, "The value of this report lies not in the numbers alone, but in the quality of reflection and conversation it enables. It is intended to be explored thoughtfully, with curiosity and care, as part of an ongoing leadership development journey.", yPos);
+    pdf.addPage();
+
+    // Page 5
+    yPos = addHeader(pdf, "Interpreting Your Results", margin);
+    yPos = addBody(pdf, "The pages that follow present multiple perspectives on how your leadership behaviours are experienced by others. Rather than focusing on individual scores or isolated data points, this report is best read by noticing patterns, alignment, and areas of difference across perspectives.", yPos);
+    yPos = addBody(pdf, "No single score tells the full story. What matters most is how the information comes together to support reflection, insight, and meaningful conversation.", yPos);
+    yPos = addBody(pdf, "This report is designed to be explored thoughtfully and, where possible, in dialogue with a coach or facilitator. Its purpose is not judgment or evaluation, but clarity about what is working well, where your leadership impact is strongest, and where focused attention may be useful.", yPos);
+    addBody(pdf, "As you review the results, consider approaching them with curiosity rather than conclusion.", yPos);
 }
 
 function createChartPage(pdf, image, imageWidth, imageHeight, cat, desc) {
@@ -492,25 +602,26 @@ function createChartPage(pdf, image, imageWidth, imageHeight, cat, desc) {
 
 function addContent(pdf, header, subheader, yPos, page, indent) {
     pdf.setTextColor("#000");
-    pdf.setFontSize(regularFont);
-    pdf.setFont("helvetica", "bold");
-    let headerWidth = 0;
-    if (header) {
-        pdf.text(header, margin + indent, yPos);
-        headerWidth = pdf.getTextWidth(header);
-    }
 
-    pdf.text(page, width - margin, yPos);
-    pdf.setFont("helvetica", "normal");
-    let lines = []
-    if (subheader) {
-        lines = pdf.splitTextToSize(subheader, maxTextWidth);
-        pdf.text(lines, margin + indent + headerWidth + spacing, yPos);
-    }
-    if (lines.length > 0) {
-        return yPos + (pdf.getTextDimensions("filler").h * (lines.length - 1) * lineHeight) + blankLine;
-    }
-    return yPos + (pdf.getTextDimensions("filler").h * (lines.length) * lineHeight) + blankLine;
+    const startX = margin + indent;
+    const pageX = width - margin;
+    const pageText = String(page);
+    const gapToPage = spacing * 2;
+
+    // Reserve a right-side column for page numbers so long ToC labels wrap cleanly.
+    pdf.setFontSize(11);
+    const pageTextWidth = pdf.getTextWidth(pageText);
+    const availableWidth = Math.max(20, pageX - pageTextWidth - gapToPage - startX);
+
+    const text = [header, subheader].filter(Boolean).join(" ");
+    pdf.setFont("helvetica", header ? "bold" : "normal");
+    const lines = pdf.splitTextToSize(text, availableWidth);
+    pdf.text(lines, startX, yPos);
+
+    pdf.setFont("helvetica", "bold");
+    pdf.text(pageText, pageX, yPos, { align: "right" });
+
+    return yPos + (pdf.getTextDimensions("filler").h * lines.length * lineHeight) + (blankLine * 0.6);
 }
 
 function createNarrativePage(pdf, question, responses) {
@@ -524,13 +635,13 @@ function createNarrativePage(pdf, question, responses) {
 
 function createToCPage(pdf) {
     let yPos = addHeader(pdf, "Table of Contents", margin);
-    yPos = addContent(pdf, "INTRODUCTION", null, yPos, "3", 0);
-    yPos = addContent(pdf, null, "Why leadership development?", yPos, "3", spacing);
-    yPos = addContent(pdf, null, "What is a 360 assessment?", yPos, "3", spacing);
-    yPos = addContent(pdf, "HOW TO USE THIS REPORT", null, yPos, "4", 0);
-    yPos = addContent(pdf, cats[0], descs[0], yPos, "5", 0);
+    yPos = addContent(pdf, "INTRODUCTION TO YOUR CLARITY INDEX 360 REPORT", null, yPos, "3", 0);
+    yPos = addContent(pdf, null, "Purpose of the Clarity Index 360", yPos, "3", spacing);
+    yPos = addContent(pdf, null, "How the Clarity Index 360 Is Designed", yPos, "3", spacing);
+    yPos = addContent(pdf, "INTERPRETING YOUR RESULTS", null, yPos, "5", 0);
+    yPos = addContent(pdf, cats[0], descs[0], yPos, "6", 0);
     for (let i = 1; i < cats.length; i++) {
-        yPos = addContent(pdf, cats[i], descs[i], yPos, String(i + 5), spacing);
+        yPos = addContent(pdf, cats[i], descs[i], yPos, String(i + 6), spacing);
     }
 }
 
@@ -542,17 +653,13 @@ function CreateGraph() {
 
     const handleDownload = async () => {
         const pdf = new jsPDF({
-            orientation: "landscape",
+            orientation: "portrait",
             unit: "mm",
             format: "a4",
             lineHeight: lineHeight
         });
 
         createContextPages(pdf, "testName", margin);
-        for (let image of chartRefs.current) {
-            createChartPage(pdf, image.toBase64Image("image/png", 2), width - margin * 2, (width - margin * 2)/2, "category", "description of category, can be empty string.");
-        }
-
         for (let i = 0; i < scaleResponses.length; i++) {
             createChartPage(pdf, scatterRefs.current[i].toBase64Image("image/png", 2), width - margin * 2, (scatterRefs.current[i].height / scatterRefs.current[i].width) * (width - margin * 2), scaleResponses[i].question, "");
         }
@@ -563,8 +670,8 @@ function CreateGraph() {
         const imgData = canvas.toDataURL("image/png");
         createChartPage(pdf, imgData, width - margin * 2, (canvas.height / canvas.width) * (width - margin * 2), "Table 2: Ratings Differentials", "")
 
-        for (let question of Object.keys(narrativeResponses[0])) {
-            createNarrativePage(pdf, question, narrativeResponses[1][question]);
+        for (let item of narrativeResponses) {
+            createNarrativePage(pdf, item.question, item.responses);
         }
         for (let i = 2; i <= pdf.getNumberOfPages(); i++) {
             pdf.setPage(i);
