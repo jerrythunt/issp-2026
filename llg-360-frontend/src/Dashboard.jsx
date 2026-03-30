@@ -3,28 +3,17 @@ import { Link } from "react-router-dom";
 import {
   getAssessments,
   markRaterSubmitted,
-  getAssessmentResponses,
   deleteAssessment,
 } from "./services/api";
 import { getAssessmentProgress } from "./utils/assessmentStatus";
-import { calculateScaledQuestionAverages } from "./utils/assessmentStats";
 
 function Dashboard() {
   const [assessments, setAssessments] = useState([]);
-  const [assessmentAverages, setAssessmentAverages] = useState({});
 
   const loadAssessments = async () => {
     try {
       const data = await getAssessments();
       setAssessments(data);
-
-      const averagesMap = {};
-      for (const assessment of data) {
-        const responses = await getAssessmentResponses(assessment.id);
-        averagesMap[assessment.id] = calculateScaledQuestionAverages(responses);
-      }
-
-      setAssessmentAverages(averagesMap);
     } catch (error) {
       console.error("Failed to load assessments:", error);
     }
@@ -169,10 +158,20 @@ function Dashboard() {
                   {assessments.map((assessment) => {
                     const progress = getAssessmentProgress(assessment);
                     return (
-                      <tr key={assessment.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                      <tr
+                        key={assessment.id}
+                        style={{ borderBottom: "1px solid #f3f4f6" }}
+                      >
                         <td style={tdStyle}>
-                          <div style={{ fontWeight: "bold" }}>{assessment.clientName}</div>
-                          <div style={{ fontSize: "0.8rem", color: "#6b7280" }}>
+                          <div style={{ fontWeight: "bold" }}>
+                            {assessment.clientName}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: "0.8rem",
+                              color: "#6b7280",
+                            }}
+                          >
                             {assessment.id}
                           </div>
                         </td>
@@ -189,15 +188,23 @@ function Dashboard() {
                         </td>
 
                         <td style={tdStyle}>
-                          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: "8px",
+                              flexWrap: "wrap",
+                            }}
+                          >
                             <Link
-                            to={`/assessments/${assessment.id}`}
-                            style={grayBtn}
-                        >
-                            View Details
-                        </Link>
-                            <button 
-                              onClick={() => handleDeleteAssessment(assessment.id)}
+                              to={`/assessments/${assessment.id}`}
+                              style={grayBtn}
+                            >
+                              View Details
+                            </Link>
+                            <button
+                              onClick={() =>
+                                handleDeleteAssessment(assessment.id)
+                              }
                               style={redBtn}
                             >
                               Delete
@@ -211,90 +218,103 @@ function Dashboard() {
               </table>
 
               <div style={{ marginTop: "28px" }}>
-                <h3 style={{ marginBottom: "16px", textAlign: "center" }}>Rater Links & Response Averages</h3>
-                {assessments.map((assessment) => {
-                  const averages = assessmentAverages[assessment.id] || [];
-                  return (
-                    <div
-                      key={`${assessment.id}-details`}
-                      style={{
-                        border: "1px solid #e5e7eb",
-                        borderRadius: "14px",
-                        padding: "18px",
-                        marginBottom: "18px",
-                        backgroundColor: "#fafafa",
-                      }}
-                    >
-                      <h4 style={{ marginTop: 0, textAlign: "center" }}>{assessment.clientName}</h4>
-                      <div style={{ marginBottom: "20px", textAlign: "center" }}>
-                        <strong style={{ display: "block", marginBottom: "10px" }}>Raters:</strong>
-                        <ul style={{ listStyle: "none", padding: 0 }}>
-                          {(assessment.raters || []).map((rater, index) => (
-                            <li 
-                              key={`${assessment.id}-${index}`} 
-                              style={{ 
-                                marginBottom: "20px",
+                <h3
+                  style={{ marginBottom: "16px", textAlign: "center" }}
+                >
+                  Rater Links
+                </h3>
+
+                {assessments.map((assessment) => (
+                  <div
+                    key={`${assessment.id}-details`}
+                    style={{
+                      border: "1px solid #e5e7eb",
+                      borderRadius: "14px",
+                      padding: "18px",
+                      marginBottom: "18px",
+                      backgroundColor: "#fafafa",
+                    }}
+                  >
+                    <h4 style={{ marginTop: 0, textAlign: "center" }}>
+                      {assessment.clientName}
+                    </h4>
+
+                    <div style={{ textAlign: "center" }}>
+                      <strong
+                        style={{ display: "block", marginBottom: "10px" }}
+                      >
+                        Raters:
+                      </strong>
+
+                      <ul style={{ listStyle: "none", padding: 0 }}>
+                        {(assessment.raters || []).map((rater, index) => (
+                          <li
+                            key={`${assessment.id}-${index}`}
+                            style={{
+                              marginBottom: "20px",
+                              display: "flex",
+                              flexDirection: "column",
+                              alignItems: "center",
+                            }}
+                          >
+                            <div style={{ marginBottom: "8px" }}>
+                              {rater.name} ({rater.relationship}) —{" "}
+                              <strong>
+                                {rater.submitted
+                                  ? "Submitted"
+                                  : "Pending"}
+                              </strong>
+                            </div>
+
+                            <div
+                              style={{
                                 display: "flex",
-                                flexDirection: "column",
-                                alignItems: "center" 
+                                gap: "8px",
+                                justifyContent: "center",
+                                flexWrap: "wrap",
                               }}
                             >
-                              <div style={{ marginBottom: "8px" }}>
-                                {rater.name} ({rater.relationship}) —{" "}
-                                <strong>{rater.submitted ? "Submitted" : "Pending"}</strong>
-                              </div>
-                              <div style={{ display: "flex", gap: "8px", justifyContent: "center", flexWrap: "wrap" }}>
-                                <button
-                                  type="button"
-                                  onClick={() => handleCopyLink(assessment.id, index)}
-                                  style={darkBtn}
-                                >
-                                  Copy Link
-                                </button>
-                                <a
-                                  href={getRaterUrl(assessment.id, index)}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  style={lightBtn}
-                                >
-                                  Open Survey
-                                </a>
-                                {!rater.submitted && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleMarkSubmitted(assessment.id, index)}
-                                    style={grayBtn}
-                                  >
-                                    Mark Submitted
-                                  </button>
-                                )}
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
+                              <button
+                                onClick={() =>
+                                  handleCopyLink(assessment.id, index)
+                                }
+                                style={darkBtn}
+                              >
+                                Copy Link
+                              </button>
 
-                      <div style={{ textAlign: "center" }}>
-                        <strong style={{ display: "block", marginBottom: "10px" }}>Scaled Question Averages:</strong>
-                        {averages.length === 0 ? (
-                          <p style={{ color: "#6b7280" }}>
-                            No submitted scaled responses yet.
-                          </p>
-                        ) : (
-                          <ul style={{ listStyle: "none", padding: 0 }}>
-                            {averages.map((item, index) => (
-                              <li key={`${assessment.id}-avg-${index}`} style={{ marginBottom: "8px" }}>
-                                <strong>{item.questionText}</strong>: {item.average} / 5
-                                {" "}({item.responsesCount} response
-                                {item.responsesCount !== 1 ? "s" : ""})
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
+                              <a
+                                href={getRaterUrl(
+                                  assessment.id,
+                                  index
+                                )}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={lightBtn}
+                              >
+                                Open Survey
+                              </a>
+
+                              {!rater.submitted && (
+                                <button
+                                  onClick={() =>
+                                    handleMarkSubmitted(
+                                      assessment.id,
+                                      index
+                                    )
+                                  }
+                                  style={grayBtn}
+                                >
+                                  Mark Submitted
+                                </button>
+                              )}
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
-                  );
-                })}
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -323,7 +343,6 @@ const darkBtn = {
   borderRadius: "8px",
   padding: "8px 12px",
   cursor: "pointer",
-  textDecoration: "none",
 };
 
 const grayBtn = {
@@ -333,8 +352,6 @@ const grayBtn = {
   borderRadius: "8px",
   padding: "8px 12px",
   cursor: "pointer",
-  textDecoration: "none",
-  display: "inline-block",
 };
 
 const redBtn = {
@@ -344,7 +361,6 @@ const redBtn = {
   borderRadius: "8px",
   padding: "8px 12px",
   cursor: "pointer",
-  textDecoration: "none",
 };
 
 const lightBtn = {
@@ -354,7 +370,6 @@ const lightBtn = {
   borderRadius: "8px",
   padding: "8px 12px",
   textDecoration: "none",
-  display: "inline-block",
 };
 
 export default Dashboard;

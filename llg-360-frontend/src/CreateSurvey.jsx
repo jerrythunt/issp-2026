@@ -16,7 +16,18 @@ function CreateSurvey() {
     try {
       const questionsData = await getQuestions();
       const surveysData = await getSurveys();
-      setQuestions(questionsData);
+
+      // Sort questions: "scaled" first, then "text", then alphabetically
+      const sortedQuestions = [...questionsData].sort((a, b) => {
+        // 1. Sort by type (scaled before text)
+        if (a.type !== b.type) {
+          return a.type === "scaled" ? -1 : 1;
+        }
+        // 2. If types are the same, sort alphabetically by text
+        return a.text.localeCompare(b.text);
+      });
+
+      setQuestions(sortedQuestions);
       setSurveys(surveysData);
     } catch (error) {
       console.error("Failed to load survey data:", error);
@@ -210,12 +221,12 @@ const inputStyle = {
   width: "100%",
   padding: "12px 14px",
   borderRadius: "10px",
-  border: "1px solid #111827", // Made border darker to match screenshot
+  border: "1px solid #111827",
   backgroundColor: "#f9fafb",
   fontSize: "0.95rem",
   boxSizing: "border-box",
-  color: "#111827",             // FIXED: Set text color to dark
-  fontWeight: "600",           // Matched screenshot weight
+  color: "#111827",
+  fontWeight: "600",
 };
 
 const questionListContainer = {

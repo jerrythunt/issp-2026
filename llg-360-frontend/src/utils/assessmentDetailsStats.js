@@ -2,6 +2,8 @@ export function getScaledAveragesFromResponses(responses) {
   const grouped = {};
 
   responses.forEach((response) => {
+    if (response.isSelf) return;
+
     (response.answers || []).forEach((answer) => {
       if (answer.type !== "scaled") return;
       if (!answer.answer) return;
@@ -29,10 +31,25 @@ export function getScaledAveragesFromResponses(responses) {
   });
 }
 
+export function getSelfScaledScores(responses) {
+  const selfResponse = responses.find((response) => response.isSelf);
+
+  if (!selfResponse) return [];
+
+  return (selfResponse.answers || [])
+    .filter((answer) => answer.type === "scaled" && answer.answer)
+    .map((answer) => ({
+      questionText: answer.questionText,
+      selfScore: Number(answer.answer),
+    }));
+}
+
 export function getTextResponsesFromResponses(responses) {
   const grouped = {};
 
   responses.forEach((response) => {
+    if (response.isSelf) return;
+
     const raterName = response.raterName || "Unknown Rater";
 
     (response.answers || []).forEach((answer) => {

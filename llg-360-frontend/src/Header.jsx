@@ -1,6 +1,13 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 function Header() {
+  const location = useLocation();
+
+  // If the URL contains "rater", this entire bar will vanish
+  if (location.pathname.includes("rater")) {
+    return null;
+  }
+
   return (
     <header
       style={{
