@@ -153,6 +153,7 @@ function CreateAssessment() {
                   <option value="Leader">Leader</option>
                   <option value="Peer">Peer</option>
                   <option value="Direct Report">Direct Report</option>
+                  <option value="Indirect Report">Indirect Report</option>
                   <option value="Other">Other</option>
                 </select>
                 

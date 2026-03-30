@@ -92,7 +92,7 @@ function RaterSurvey() {
 
       <div style={containerStyle}>
         <div style={introCard}>
-          <h1 style={{ margin: "0 0 10px 0", color: "#111827" }}>Leadership 360 Feedback</h1>
+          <h1 style={{ margin: "0 0 10px 0", color: "#111827" }}>Clarity Index 360</h1>
           <p style={{ color: "#4b5563", margin: 0 }}>
             Providing feedback for: <strong>{assessment.clientName}</strong>
           </p>
