@@ -297,7 +297,7 @@ const narrativeResponses = [
     }
 ]
 
-const margin = 25.4; // 1 inch
+const margin = 25.4;
 const spacing = 5;
 const width = 210;
 const regularFont = 9;
@@ -374,8 +374,7 @@ const scatterOptions = {
     },
 };
 
-let cats = [];
-let descs = [];
+let scale = [];
 
 function parseResponse(response) {
     let datasets = [];
@@ -443,7 +442,7 @@ function addHeader(pdf, text, yPos) {
 function addSubheader(pdf, text, yPos) {
     pdf.setFontSize(headerFont);
     pdf.setTextColor("#000");
-    pdf.setFont("helvetica", "normal");
+    pdf.setFont("helvetica", "bold");
     let lines = pdf.splitTextToSize(text, maxTextWidth);
     return writeWrappedLinesWithPaging(pdf, lines, margin, yPos);
 }
@@ -585,22 +584,23 @@ function createContextPages(pdf, name) {
     yPos = addBody(pdf, "No single score tells the full story. What matters most is how the information comes together to support reflection, insight, and meaningful conversation.", yPos);
     yPos = addBody(pdf, "This report is designed to be explored thoughtfully and, where possible, in dialogue with a coach or facilitator. Its purpose is not judgment or evaluation, but clarity about what is working well, where your leadership impact is strongest, and where focused attention may be useful.", yPos);
     addBody(pdf, "As you review the results, consider approaching them with curiosity rather than conclusion.", yPos);
+    pdf.addPage();
+
+    // Page 6
+    yPos = addHeader(pdf, "Results by Leadership Theme", margin);
+    yPos = addBody(pdf, "The following tables present results related to Rater Group Comparisons, Ratings Differentials, and Ratings Distribution drawing on input from multiple perspectives.As you review this section, consider the following reflection questions:", yPos);
+    yPos = addIndentBody(pdf, "What stands out to you most in these results?\nWhere do you notice alignment between your self-ratings and others’ experience?\nWhere do you notice differences or variation across perspectives?\nWhat context, conditions, or expectations might influence how these behaviours are experienced?", yPos);
 }
 
-function createChartPage(pdf, image, imageWidth, imageHeight, cat, desc) {
+function createChartPage(pdf, image, imageWidth, imageHeight, question) {
     pdf.addPage();
-    let yPos = addHeader(pdf, cat, margin);
-    if (desc) {
-        yPos = addSubheader(pdf, desc, yPos);
-
-    }
+    let yPos = addHeader(pdf, question, margin);
     yPos += blankLine;
     pdf.addImage(image, "PNG", (width - imageWidth) / 2, yPos, imageWidth, imageHeight);
-    cats.push(cat);
-    descs.push(desc);
+    scale.push(question);
 }
 
-function addContent(pdf, header, subheader, yPos, page, indent) {
+function addContent(pdf, header, yPos, page, indent) {
     pdf.setTextColor("#000");
 
     const startX = margin + indent;
@@ -613,9 +613,8 @@ function addContent(pdf, header, subheader, yPos, page, indent) {
     const pageTextWidth = pdf.getTextWidth(pageText);
     const availableWidth = Math.max(20, pageX - pageTextWidth - gapToPage - startX);
 
-    const text = [header, subheader].filter(Boolean).join(" ");
-    pdf.setFont("helvetica", header ? "bold" : "normal");
-    const lines = pdf.splitTextToSize(text, availableWidth);
+    pdf.setFont("helvetica", "bold");
+    const lines = pdf.splitTextToSize(header, availableWidth);
     pdf.text(lines, startX, yPos);
 
     pdf.setFont("helvetica", "bold");
@@ -624,24 +623,53 @@ function addContent(pdf, header, subheader, yPos, page, indent) {
     return yPos + (pdf.getTextDimensions("filler").h * lines.length * lineHeight) + (blankLine * 0.6);
 }
 
+function createNarrativeIntro(pdf) {
+    pdf.addPage();
+    let yPos = addHeader(pdf, "Narrative Feedback Introduction", margin);
+    yPos = addSubheader(pdf, "Narrative Comments: Context and Nuance", yPos);
+    yPos = addBody(pdf, "In addition to numeric ratings, raters were invited to provide open-ended comments. These narrative responses offer context, examples, and nuance that numbers alone cannot provide.\nThe comments that follow are:", yPos);
+    yPos = addIndentBody(pdf, "presented verbatim\nnot attributed to individuals\norganized by question", yPos);
+    yPos = addBody(pdf, "As you read them, resist the urge to tally or weigh individual comments. Instead, notice:", yPos);
+    yPos = addIndentBody(pdf, "recurring themes or language\ncontrasts in perspective\nmoments of clarity or tension", yPos);
+    addBody(pdf, "Resist the urge to focus only on the highest or lowest scores. The most useful insights often live in the patterns and gaps. These comments are intended to support reflection and conversation, not to assign intent or judgment.", yPos);
+
+}
+
 function createNarrativePage(pdf, question, responses) {
     pdf.addPage();
     let yPos = addHeader(pdf, question, margin);
     let response = responses.join("\n");
     addBody(pdf, response, yPos);
-    cats.push(question)
-    descs.push("");
+}
+
+function createConclusionPage(pdf) {
+    pdf.addPage();
+    let yPos = addHeader(pdf, "Integration and Forward Reflection", margin);
+    yPos = addSubheader(pdf, "Making Meaning of the Results", yPos);
+    yPos = addBody(pdf, "The Clarity Index 360 is not intended to provide answers, but to invite intentional reflection and choice.\nAs you integrate what you have noticed in this report, consider the following questions:", yPos);
+    yPos = addIndentBody(pdf, "What feels most important to sit with after reviewing these results?\nWhich strengths do you want to protect or build on?\nWhat patterns, if left unexamined, might limit your impact?\nWhat conversations might these results invite, with your coach, your leader, or your team?\nWhere do you feel most ready to experiment or adjust your leadership approach?", yPos);
+    yPos = addBody(pdf, "The value of this report lies not in the data itself, but in how it supports ongoing learning, growth, and leadership practice.", yPos);
+    pdf.addImage(newLogo, "PNG", (width / 2) - 30, yPos, 60, 60);
+    pdf.setFont("times", "bolditalic");
+    pdf.setFontSize(10.5);
+    pdf.text("Clarity creates choice. Choice creates growth", width / 2, yPos + 60 + blankLine, { align: "center" });
+
 }
 
 function createToCPage(pdf) {
     let yPos = addHeader(pdf, "Table of Contents", margin);
-    yPos = addContent(pdf, "INTRODUCTION TO YOUR CLARITY INDEX 360 REPORT", null, yPos, "3", 0);
-    yPos = addContent(pdf, null, "Purpose of the Clarity Index 360", yPos, "3", spacing);
-    yPos = addContent(pdf, null, "How the Clarity Index 360 Is Designed", yPos, "3", spacing);
-    yPos = addContent(pdf, "INTERPRETING YOUR RESULTS", null, yPos, "5", 0);
-    yPos = addContent(pdf, cats[0], descs[0], yPos, "6", 0);
-    for (let i = 1; i < cats.length; i++) {
-        yPos = addContent(pdf, cats[i], descs[i], yPos, String(i + 6), spacing);
+    yPos = addContent(pdf, "INTRODUCTION TO YOUR CLARITY INDEX 360 REPORT", yPos, "3", 0);
+    yPos = addContent(pdf, "Purpose of the Clarity Index 360", yPos, "3", spacing);
+    yPos = addContent(pdf, "How the Clarity Index 360 Is Designed", yPos, "3", spacing);
+    yPos = addContent(pdf, "INTERPRETING YOUR RESULTS", yPos, "5", 0);
+    yPos = addContent(pdf, "Results by Leadership Theme", yPos, "6", 0);
+    for (let i = 0; i < scale.length; i++) {
+        yPos = addContent(pdf, scale[i], yPos, String(i + 7), spacing);
+    }
+    yPos = addContent(pdf, "Narrative Feedback Introduction", yPos, String(scale.length + 8), 0);
+    yPos = addContent(pdf, "Narrative Comments: Context and Nuance", yPos, String(scale.length + 8), spacing);
+    for (let i = 0; i < narrativeResponses.length; i++) {
+        yPos = addContent(pdf, narrativeResponses[i]["question"], yPos, String(scale.length + 9 + i), spacing);
     }
 }
 
@@ -661,18 +689,19 @@ function CreateGraph() {
 
         createContextPages(pdf, "testName", margin);
         for (let i = 0; i < scaleResponses.length; i++) {
-            createChartPage(pdf, scatterRefs.current[i].toBase64Image("image/png", 2), width - margin * 2, (scatterRefs.current[i].height / scatterRefs.current[i].width) * (width - margin * 2), scaleResponses[i].question, "");
+            createChartPage(pdf, scatterRefs.current[i].toBase64Image("image/png", 2), width - margin * 2, (scatterRefs.current[i].height / scatterRefs.current[i].width) * (width - margin * 2), scaleResponses[i].question);
         }
-        createChartPage(pdf, distributionRef.current.toBase64Image("image/png", 2), width - margin * 2, (distributionRef.current.height / distributionRef.current.width) * (width - margin * 2), "Table 3: Ratings Distribution", "");
+        createChartPage(pdf, distributionRef.current.toBase64Image("image/png", 2), width - margin * 2, (distributionRef.current.height / distributionRef.current.width) * (width - margin * 2), "Table 3: Ratings Distribution");
 
         // cannot add heatmap as referenced chart, need to use html2canvas to capture as image
         const canvas = await html2canvas(heatmapRef.current);
         const imgData = canvas.toDataURL("image/png");
-        createChartPage(pdf, imgData, width - margin * 2, (canvas.height / canvas.width) * (width - margin * 2), "Table 2: Ratings Differentials", "")
-
+        createChartPage(pdf, imgData, width - margin * 2, (canvas.height / canvas.width) * (width - margin * 2), "Table 2: Ratings Differentials")
+        createNarrativeIntro(pdf);
         for (let item of narrativeResponses) {
             createNarrativePage(pdf, item.question, item.responses);
         }
+        createConclusionPage(pdf);
         for (let i = 2; i <= pdf.getNumberOfPages(); i++) {
             pdf.setPage(i);
             if (i === 2) { createToCPage(pdf) };
