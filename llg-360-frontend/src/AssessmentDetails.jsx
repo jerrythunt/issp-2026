@@ -1,26 +1,27 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
-import { getAssessmentDetails } from "./services/api";
+import { getAssessmentDetails, getFullSurvey } from "./services/api";
 import { getAssessmentProgress } from "./utils/assessmentStatus";
 import {
   getScaledAveragesFromResponses,
   getTextResponsesFromResponses,
 } from "./utils/assessmentDetailsStats";
 import AssessmentChart from "./AssessmentChart";
+import { generateAssessmentReportPdf } from "./reporting";
 
 function AssessmentDetails() {
   const { id } = useParams();
   const [assessment, setAssessment] = useState(null);
+  const [survey, setSurvey] = useState(null);
   const [loading, setLoading] = useState(true);
-  const exportRef = useRef(null);
 
   useEffect(() => {
     async function loadDetails() {
       try {
         const data = await getAssessmentDetails(id);
+        const surveyData = await getFullSurvey(data.surveyId);
         setAssessment(data);
+        setSurvey(surveyData);
       } catch (error) {
         console.error("Failed to load assessment details:", error);
       } finally {
@@ -32,39 +33,8 @@ function AssessmentDetails() {
   }, [id]);
 
   const handleDownloadPdf = async () => {
-    if (!exportRef.current) return;
-
     try {
-      const canvas = await html2canvas(exportRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: "#f3f4f6",
-      });
-
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF("p", "mm", "a4");
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-
-      const margin = 10;
-      const usableWidth = pageWidth - margin * 2;
-      const imgHeight = (canvas.height * usableWidth) / canvas.width;
-
-      let heightLeft = imgHeight;
-      let position = margin;
-
-      pdf.addImage(imgData, "PNG", margin, position, usableWidth, imgHeight);
-      heightLeft -= (pageHeight - margin * 2);
-
-      while (heightLeft > 0) {
-        pdf.addPage();
-        position = margin - (imgHeight - heightLeft);
-        pdf.addImage(imgData, "PNG", margin, position, usableWidth, imgHeight);
-        heightLeft -= (pageHeight - margin * 2);
-      }
-
-      const safeClientName = assessment.clientName.replace(/[^a-z0-9]/gi, "_");
-      pdf.save(`${safeClientName}_assessment_report.pdf`);
+      await generateAssessmentReportPdf({ assessment, survey });
     } catch (error) {
       console.error("Failed to generate PDF:", error);
       alert("Failed to generate PDF.");
@@ -89,12 +59,14 @@ function AssessmentDetails() {
       <div style={containerStyle}>
         <div style={topBarStyle}>
           <h1 style={titleStyle}>Assessment Details</h1>
-          <button onClick={handleDownloadPdf} style={downloadBtnStyle}>
-            Download PDF
-          </button>
+          {progress.submitted / progress.total === 1 && (
+            <button onClick={handleDownloadPdf} style={downloadBtnStyle}>
+              Download PDF
+            </button>
+          )}
         </div>
 
-        <div ref={exportRef}>
+        <div>
           {/* 1. Summary Card */}
           <div style={cardStyle}>
             <h2 style={{ marginTop: 0 }}>{assessment.clientName}</h2>
